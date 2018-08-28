@@ -29,13 +29,14 @@ class EspSocketApi {
 		void setSocketIO (	String url, 
 							int port, 
 							std::function<void ()> connect_func,
-							std::function<void (const char * payload, size_t length)> command_func);
+							std::function<void (String var, String msg)> command_func);
 
 		void log(String txt, int loglvl);
 		void log(String txt);
 		
 		
 		void loop();
+		int loop1sek (std::function<void ()> f);
 		void sendMsg(String varname, String msg);
 		void initVars(String var, String wert);
 		
@@ -61,7 +62,7 @@ class EspSocketApi {
 		String _socketurl = "";
 		int _socketport = 0;
 		std::function<void ()> _clientConnectFunction;
-		std::function<void (const char * payload, size_t length)> _clientCommandFunction;
+		std::function<void (String var, String msg)> _clientCommandFunction;
 		
 		
 		// Socket IO Verbindungsfunktionen		
@@ -74,6 +75,12 @@ class EspSocketApi {
 		
 		// Speicherfunktionen für Zustände
 		std::vector<std::vector<String>> _saved_vars;
+		
+		
+		// Variabeln für die exakte Loopfunktion
+		int _loop_timer = 0;
+		int _loop_atimer = -1;
+		int _loop_counter = 0;
 	
 	
 		// Timestamp

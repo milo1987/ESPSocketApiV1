@@ -6,7 +6,7 @@
 EspSocketApi::EspSocketApi (String sname, String sversion) {
 	_soft_name = sname;
 	_soft_version = sversion;
-	_api_version = "0.0.2";
+	_api_version = "0.0.5";
 }
 
 void EspSocketApi::setWifi(const char* ssid, const char* pwd) {
@@ -18,11 +18,12 @@ void EspSocketApi::init() {
 	Serial.begin(115200);
 	SPIFFS.begin();
 	WiFi.mode(WIFI_STA);
+	WiFi.hostname(_soft_name.c_str());
 	
 }
 
 
-void EspSocketApi::setSocketIO (String url, int port, std::function<void ()> connect_func,std::function<void (const char * payload, size_t length)> command_func) {
+void EspSocketApi::setSocketIO (String url, int port, std::function<void ()> connect_func,std::function<void (String var, String msg)> command_func) {
 	_socketurl = url;
 	_socketport = port;
 	_clientCommandFunction = command_func;
@@ -34,7 +35,16 @@ void EspSocketApi::startSocketIO() {
 	webSocket.on("connect", [&](const char * payload, size_t length) { socketConnect(payload, length); });
 	webSocket.on("disconnected", [&](const char * payload, size_t length) { socketDisconnected(payload, length); });
 	webSocket.on("timeSync", [&](const char * payload, size_t length) { socketTimeSync(payload, length); });
-	webSocket.on("command", _clientCommandFunction);
+	webSocket.on("command", [&](const char * payload, size_t length) {
+		
+		String msgString = String(payload); // Konvertierung der nachricht in ein String
+		int i = msgString.indexOf("~"); 
+				  
+		String head = msgString.substring(0, i);
+		String msg =  msgString.substring(i+1);
+		_clientCommandFunction(head, msg);
+			
+	});
 	webSocket.on("webUpdate", [&](const char * payload, size_t length) { perform_web_update(payload, length); });
 	webSocket.on("debug", [&](const char * payload, size_t length) { setDebug(String(payload)); });
 	
@@ -114,8 +124,9 @@ void EspSocketApi::loop() {
 	
 // Prüfe ob WLAN Verbunden	
 	if (wiFiMulti.run() != WL_CONNECTED) {
+
 		
-		//log ("WiFi nicht verbunden", 0);
+		log ("WiFi nicht verbunden", 0);
 		wifiinit = false;		// Setzt die Init beim "Neuverbinden"
 		
 	} else {
@@ -140,6 +151,26 @@ void EspSocketApi::loop() {
 	}
 		
 }
+
+int EspSocketApi::loop1sek (std::function<void ()> f) {
+
+	while (_loop_timer <= (_loop_atimer + 1000)) {
+
+
+
+        loop();
+		f();
+
+        delay(1);
+        _loop_timer = millis();
+  
+   }
+
+    _loop_atimer = _loop_timer;
+    return ++_loop_counter;
+
+
+}	
 
 
 
@@ -344,6 +375,9 @@ void EspSocketApi::addSavedVars(String name, String wert) {
 	}
 	
 	_saved_vars.push_back(str);
+	
+	
+	saveVars();
 	
 	
 	
