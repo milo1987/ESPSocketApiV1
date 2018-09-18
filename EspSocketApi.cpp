@@ -6,7 +6,7 @@
 EspSocketApi::EspSocketApi (String sname, String sversion) {
 	_soft_name = sname;
 	_soft_version = sversion;
-	_api_version = "0.0.5";
+	_api_version = "0.0.6";
 }
 
 void EspSocketApi::setWifi(const char* ssid, const char* pwd) {
@@ -479,6 +479,19 @@ void EspSocketApi::loadVars() {
 	
 	
 }
+
+
+// Hilfsfunktionen
+
+
+String EspSocketApi::formatedTime() {
+  String uhrzeit = String(hour()) + ":" + String(minute());
+  if (minute() < 10) {    uhrzeit = String(hour()) + ":0" + String(minute());
+  }
+  
+  return uhrzeit;
+}
+
 
 
 
