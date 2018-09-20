@@ -37,7 +37,9 @@ void EspSocketApi::startSocketIO() {
 	webSocket.on("timeSync", [&](const char * payload, size_t length) { socketTimeSync(payload, length); });
 	webSocket.on("command", [&](const char * payload, size_t length) {
 		
+		
 		String msgString = String(payload); // Konvertierung der nachricht in ein String
+		log ("Erhalte Command strg: " + msgString);
 		int i = msgString.indexOf("~"); 
 				  
 		String head = msgString.substring(0, i);
@@ -104,6 +106,10 @@ void EspSocketApi::socketTimeSync (const char * payload, size_t length) {
 	log ("Uhrzeit gesetzt: " + String( hour() ) + ":" + String( minute() ) ) ;
 	
 	
+}
+
+void EspSocketApi::socketPing (const char * payload, size_t length) {
+	webSocket.emit("ping","\"ping\"");
 }
 
 
@@ -195,6 +201,7 @@ void EspSocketApi::log(String txt, int loglvl) {
 void EspSocketApi::log(String txt) { 
 	log(txt, 0);
 }
+
 
 
 

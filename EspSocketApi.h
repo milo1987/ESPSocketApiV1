@@ -45,6 +45,10 @@ class EspSocketApi {
 		void loadVars();
 		void saveVars();
 		
+		// Hilfsfunktionen
+		
+		String formatedTime();
+		
 	
 	private:
 	
@@ -70,6 +74,7 @@ class EspSocketApi {
 		void socketTimeSync(const char * payload, size_t length);
 		void socketDisconnected (const char * payload, size_t length);
 		void perform_web_update (const char * payload, size_t length);
+		void socketPing (const char * payload, size_t length);
 		void setDebug (String s);
 		void startSocketIO();		// Startet die SocketIO Verbindung
 		
@@ -90,6 +95,8 @@ class EspSocketApi {
 		// Wifisteuerung
 		boolean wifiinit = false;
 	
+		// Hilfsfunktionen
+		
 	
 	
 };
