@@ -24,6 +24,7 @@ class EspSocketApi {
 	
 	public:
 		EspSocketApi(String sname, String sversion);
+		EspSocketApi(String sname, String sversion, int pingintervall);
 		void setWifi(const char* ssid, const char* pwd);
 		void init();
 		void setSocketIO (	String url, 
@@ -35,8 +36,8 @@ class EspSocketApi {
 		void log(String txt);
 		
 		
-		void loop();
-		int loop1sek (std::function<void ()> f);
+		
+		int loop (std::function<void ()> f);
 		void sendMsg(String varname, String msg);
 		void initVars(String var, String wert);
 		
@@ -68,6 +69,7 @@ class EspSocketApi {
 		std::function<void ()> _clientConnectFunction;
 		std::function<void (String var, String msg)> _clientCommandFunction;
 		
+		void loop();
 		
 		// Socket IO Verbindungsfunktionen		
 		void socketConnect(const char * payload, size_t length);	// Bei Verbindung wird diese F aufgerufen
@@ -86,6 +88,7 @@ class EspSocketApi {
 		int _loop_timer = 0;
 		int _loop_atimer = -1;
 		int _loop_counter = 0;
+		int _pingintervall = 10;
 	
 	
 		// Timestamp

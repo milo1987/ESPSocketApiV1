@@ -6,7 +6,11 @@
 EspSocketApi::EspSocketApi (String sname, String sversion) {
 	_soft_name = sname;
 	_soft_version = sversion;
-	_api_version = "0.0.6";
+	_api_version = "0.0.7";
+}
+EspSocketApi::EspSocketApi (String sname, String sversion, int pingintervall) {
+	_pingintervall = pingintervall;
+	EspSocketApi(sname, sversion);
 }
 
 void EspSocketApi::setWifi(const char* ssid, const char* pwd) {
@@ -141,13 +145,15 @@ void EspSocketApi::loop() {
 			
 			webSocket.loop();
 			
+			
+			
 		} else { // Ansonsten hier die Dauerschleife
 			
 			if (_socketport > 0) {
 				startSocketIO();
 				
 			} else
-				log ("Es wurde kein SocketIO Port gesetzt. Funktion setSocketIO!!");
+				log ("Es wurde kein SocketIO Port gesetzt. Funktion setSocketIO nutzen!!");
 			
 			wifiinit = true;
 		}
@@ -158,7 +164,7 @@ void EspSocketApi::loop() {
 		
 }
 
-int EspSocketApi::loop1sek (std::function<void ()> f) {
+int EspSocketApi::loop (std::function<void ()> f) {
 
 	while (_loop_timer <= (_loop_atimer + 1000)) {
 
@@ -173,7 +179,12 @@ int EspSocketApi::loop1sek (std::function<void ()> f) {
    }
 
     _loop_atimer = _loop_timer;
-    return ++_loop_counter;
+	_loop_counter++;
+	
+	if (_loop_counter % _pingintervall == 0)
+		webSocket.emit("ping","\"ping\"");
+	
+    return _loop_counter;
 
 
 }	
