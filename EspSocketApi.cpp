@@ -6,7 +6,7 @@
 EspSocketApi::EspSocketApi (String sname, String sversion) {
 	_soft_name = sname;
 	_soft_version = sversion;
-	_api_version = "0.0.7";
+	_api_version = "0.0.8";
 }
 EspSocketApi::EspSocketApi (String sname, String sversion, int pingintervall) {
 	_pingintervall = pingintervall;
@@ -39,6 +39,7 @@ void EspSocketApi::startSocketIO() {
 	webSocket.on("connect", [&](const char * payload, size_t length) { socketConnect(payload, length); });
 	webSocket.on("disconnected", [&](const char * payload, size_t length) { socketDisconnected(payload, length); });
 	webSocket.on("timeSync", [&](const char * payload, size_t length) { socketTimeSync(payload, length); });
+	webSocket.on("ping", [&](const char * payload, size_t length) { socketPing(payload, length); });
 	webSocket.on("command", [&](const char * payload, size_t length) {
 		
 		
@@ -113,7 +114,7 @@ void EspSocketApi::socketTimeSync (const char * payload, size_t length) {
 }
 
 void EspSocketApi::socketPing (const char * payload, size_t length) {
-	webSocket.emit("ping","\"ping\"");
+	_lastping = millis();
 }
 
 
@@ -183,11 +184,26 @@ int EspSocketApi::loop (std::function<void ()> f) {
 	
 	if (_loop_counter % _pingintervall == 0)
 		webSocket.emit("ping","\"ping\"");
+	if (_usePingTimeOut) {
+		//log ("Millis: " + String(millis()) + "; Lastping: " + String(_lastping+(_pingintervall*1000+5000)));
+		if (_loop_counter % (_pingintervall+5) == 0) {
+			if (millis() > _lastping+(_pingintervall*1000+5000) )
+				_pingTimeOutFunction();
+		}
+	}
 	
     return _loop_counter;
 
 
 }	
+
+
+void EspSocketApi::setTimeOutAction(std::function<void ()> pingTimeOutFunction) {
+	
+	_usePingTimeOut = true;
+	_pingTimeOutFunction = pingTimeOutFunction;
+	
+}
 
 
 

@@ -50,6 +50,10 @@ class EspSocketApi {
 		
 		String formatedTime();
 		
+		// Timeoutfunktionen
+		
+		void setTimeOutAction(std::function<void ()> pingTimeOutFunction);
+		
 	
 	private:
 	
@@ -88,8 +92,12 @@ class EspSocketApi {
 		int _loop_timer = 0;
 		int _loop_atimer = -1;
 		int _loop_counter = 0;
+		
+		// Pingfunktionen
 		int _pingintervall = 10;
-	
+		int _lastping = 0;
+		boolean _usePingTimeOut = false;
+		std::function<void ()> _pingTimeOutFunction;
 	
 		// Timestamp
 		int timestamp = 0;
