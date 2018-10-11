@@ -165,6 +165,10 @@ void EspSocketApi::loop() {
 		
 }
 
+boolean EspSocketApi::isConnected() {
+	return _connection;
+}
+
 int EspSocketApi::loop (std::function<void ()> f) {
 
 	while (_loop_timer <= (_loop_atimer + 1000)) {
@@ -184,13 +188,19 @@ int EspSocketApi::loop (std::function<void ()> f) {
 	
 	if (_loop_counter % _pingintervall == 0)
 		webSocket.emit("ping","\"ping\"");
-	if (_usePingTimeOut) {
+
 		//log ("Millis: " + String(millis()) + "; Lastping: " + String(_lastping+(_pingintervall*1000+5000)));
 		if (_loop_counter % (_pingintervall+5) == 0) {
-			if (millis() > _lastping+(_pingintervall*1000+5000) )
-				_pingTimeOutFunction();
+			if (millis() > _lastping+(_pingintervall*1000+5000) ) {
+				if (_usePingTimeOut)
+					_pingTimeOutFunction();
+				
+				
+				_connection = false;
+			} else
+				_connection = true;
 		}
-	}
+	
 	
     return _loop_counter;
 

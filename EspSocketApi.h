@@ -53,7 +53,7 @@ class EspSocketApi {
 		// Timeoutfunktionen
 		
 		void setTimeOutAction(std::function<void ()> pingTimeOutFunction);
-		
+		boolean isConnected();
 	
 	private:
 	
@@ -98,6 +98,7 @@ class EspSocketApi {
 		int _lastping = 0;
 		boolean _usePingTimeOut = false;
 		std::function<void ()> _pingTimeOutFunction;
+		boolean _connection = false;
 	
 		// Timestamp
 		int timestamp = 0;
