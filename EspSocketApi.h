@@ -108,7 +108,7 @@ class EspSocketApi {
 		boolean wifiinit = false;
 	
 		// Hilfsfunktionen
-		
+		void reset ();
 	
 	
 };

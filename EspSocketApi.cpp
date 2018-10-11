@@ -6,7 +6,7 @@
 EspSocketApi::EspSocketApi (String sname, String sversion) {
 	_soft_name = sname;
 	_soft_version = sversion;
-	_api_version = "0.0.8";
+	_api_version = "0.0.9";
 }
 EspSocketApi::EspSocketApi (String sname, String sversion, int pingintervall) {
 	_pingintervall = pingintervall;
@@ -54,10 +54,16 @@ void EspSocketApi::startSocketIO() {
 	});
 	webSocket.on("webUpdate", [&](const char * payload, size_t length) { perform_web_update(payload, length); });
 	webSocket.on("debug", [&](const char * payload, size_t length) { setDebug(String(payload)); });
+	webSocket.on("reset", [&](const char * payload, size_t length) { reset(); });
 	
     webSocket.begin(_socketurl.c_str(), _socketport);
 	
 
+}
+
+
+void EspSocketApi::reset() {
+	ESP.restart();
 }
 
 
