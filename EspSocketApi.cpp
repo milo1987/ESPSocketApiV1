@@ -6,7 +6,7 @@
 EspSocketApi::EspSocketApi (String sname, String sversion) {
 	_soft_name = sname;
 	_soft_version = sversion;
-	_api_version = "0.0.9";
+	_api_version = "0.0.11";
 }
 EspSocketApi::EspSocketApi (String sname, String sversion, int pingintervall) {
 	_pingintervall = pingintervall;
@@ -17,13 +17,43 @@ void EspSocketApi::setWifi(const char* ssid, const char* pwd) {
 	wiFiMulti.addAP(ssid, pwd);
 }
 
-void EspSocketApi::init() {
+void EspSocketApi::init(boolean setGroupfunction) {
 	
 	Serial.begin(115200);
 	SPIFFS.begin();
+	
+	if (setGroupfunction) {
+		
+		_groupfunction = true;
+		
+		loadVars();
+		
+		String grpname  = getSavedVar("grpsetting_name");
+		String grpgroup = getSavedVar("grpsetting_gruppe");
+		
+		log (grpname);
+		log (grpgroup);
+		
+		if (grpname != "n/a" && grpgroup != "n/a") {
+			_soft_name = grpgroup + "." + grpname;
+			log ("Gruppennamen konfiguriert. Setze gespeicherte Variabeln...");
+		} else {
+		 int i = _soft_name.indexOf(".");
+		 addSavedVars("grpsetting_gruppe", _soft_name.substring(0,i));
+		 addSavedVars("grpsetting_name", _soft_name.substring(i+1));
+		 log ("Gruppenname noch nicht konfiguriert. Setze Variabeln....");
+		}
+		
+	}
+	
+	
 	WiFi.mode(WIFI_STA);
 	WiFi.hostname(_soft_name.c_str());
 	
+}
+
+void EspSocketApi::init() {
+	init(false);	
 }
 
 
@@ -55,12 +85,23 @@ void EspSocketApi::startSocketIO() {
 	webSocket.on("webUpdate", [&](const char * payload, size_t length) { perform_web_update(payload, length); });
 	webSocket.on("debug", [&](const char * payload, size_t length) { setDebug(String(payload)); });
 	webSocket.on("reset", [&](const char * payload, size_t length) { reset(); });
+	webSocket.on("setGrpname", [&](const char * payload, size_t length) { setGrpname(String(payload)); });
 	
     webSocket.begin(_socketurl.c_str(), _socketport);
 	
 
 }
 
+void EspSocketApi::setGrpname(String s) {
+	
+	int i = s.indexOf(":");
+	addSavedVars("grpsetting_gruppe", s.substring(0,i));
+	addSavedVars("grpsetting_name", s.substring(i+1));
+	log ("Adaptergruppenname geändert. Resette....");
+	delay(1000);
+	reset();
+	
+}
 
 void EspSocketApi::reset() {
 	ESP.restart();
@@ -71,7 +112,8 @@ void EspSocketApi::socketConnect (const char * payload, size_t length) {
 	
 	log("Beginne mit SocketConnect", 0);
 	
-	webSocket.emit("init", String( "\"" + _soft_name + "!*!" + _soft_version + "!*!" + WiFi.localIP().toString() + "!*!" + _api_version +  "\"").c_str());
+	
+	webSocket.emit("init", String( "\"" + _soft_name + "!*!" + _soft_version + "!*!" + WiFi.localIP().toString() + "!*!" + _api_version + "!*!" + String(_groupfunction) + "\"").c_str());
 	
 	
 	_clientConnectFunction();
@@ -143,7 +185,7 @@ void EspSocketApi::loop() {
 	if (wiFiMulti.run() != WL_CONNECTED) {
 
 		
-		log ("WiFi nicht verbunden", 0);
+		//log ("WiFi nicht verbunden", 0);
 		wifiinit = false;		// Setzt die Init beim "Neuverbinden"
 		
 	} else {
@@ -256,12 +298,19 @@ void EspSocketApi::perform_web_update(const char * payload, size_t length) {
 	
 	String fehlerString = "";
 	String soft_link = String(payload);
+	
+	String name = _soft_name;
+	
+	if(_groupfunction) {
+		int i = name.indexOf(".");
+		name = name.substring(0,i);
+	}
 
 	HTTPClient httpClient;
 	log ("Link: " + soft_link);
 	httpClient.begin( soft_link );
 	httpClient.addHeader("Content-Type", "application/x-www-form-urlencoded");
-	int httpCode = httpClient.POST("checkUpdate=true&name=" + _soft_name);
+	int httpCode = httpClient.POST("checkUpdate=true&name=" + name);
 	
 	
 	String erg = httpClient.getString();
@@ -277,110 +326,62 @@ void EspSocketApi::perform_web_update(const char * payload, size_t length) {
 	  float oldVersion = _soft_version.toFloat();
 	  
 		  
-		 fehlerString += "Current firmware version: " + String(oldVersion) + "\n";
-		 fehlerString += "Available firmware version: " + String(newVersion) + "\n";
+		 log ( "Current firmware version: " + String(oldVersion) + "\n");
+		 log ( "Available firmware version: " + String(newVersion) + "\n");
 	  
 	  
 	  
 		if (newVersion > oldVersion ) {
 			
-			httpClient.POST("checkFiles=true&name=" + _soft_name + "&version="+ erg);
+			httpClient.POST("checkFiles=true&name=" + name + "&version="+ erg);
 			String checkFiles = httpClient.getString();
 			if (checkFiles == "OK") {
 			
 				//String request = "?getSPIFFSFiles=true&name=" + _soft_name + "&version=" + erg;
-				fehlerString += "Update wird geladen....\n";
-				
-				//log ("Beginne mit SPIFFS Aktualisierung",0);
-						
-
-						
-				/* SPIFFS UPDATE gelöscht, da nicht mehr benötigt!
-				
-				
-				t_httpUpdate_return ret = ESPhttpUpdate.updateSpiffs(soft_link + request);
-				 boolean isSpiffsUpdate = false;
-				 
-				 if (ret == HTTP_UPDATE_OK) {
-					 
-					 log ("SpiffsUpdate erfolgreich",0);
-					 isSpiffsUpdate = true;
-					 
-				 } else {
-				 
-					switch(ret) {
-						case HTTP_UPDATE_FAILED:
-							log("HTTP_UPDATE_FAILED Error: "  + ESPhttpUpdate.getLastErrorString(),0);
-							fehlerString = "HTTP_UPDATE_FAILED Error: "  + ESPhttpUpdate.getLastErrorString();
-							break;
-
-						case HTTP_UPDATE_NO_UPDATES:
-							log("HTTP_UPDATE_NO_UPDATES",0);
-							break;
-
-						case HTTP_UPDATE_OK:
-							log("HTTP_UPDATE_OK",0);
-							break;
-					}
-							
-				 }		
-				 
-				 
-					*/		
-		
-						
-						
-					boolean isSpiffsUpdate = true;
-					
-					
-					if (isSpiffsUpdate) {
-							
-						//log ("Schreibe config neu.", 0);
-						//saveConfigData();
+				log( "Update wird geladen....\n");
 							
 							
-						fehlerString += "Beginne mit OTA Update. \n";
-						String request = "?getScetchFiles=true&name=" + _soft_name + "&version=" + erg;
+						log ("Beginne mit OTA Update. \n");
+						String request = "?getScetchFiles=true&name=" + name + "&version=" + erg;
 						
-						t_httpUpdate_return ret = ESPhttpUpdate.update(soft_link + request);
+						 t_httpUpdate_return ret = ESPhttpUpdate.update(soft_link + request);
 						 boolean isSpiffsUpdate = false;
 						 
 						 if (ret == HTTP_UPDATE_OK) {
 							 
-							fehlerString += "Scetchupdate erfolgreich \n";
+							log ("Scetchupdate erfolgreich \n");
 							 
 							 
 						 } else {
 						 
 							switch(ret) {
 								case HTTP_UPDATE_FAILED:
-									fehlerString +=("HTTP_UPDATE_FAILED Error: "  + ESPhttpUpdate.getLastErrorString() + "\n",0);
+									log("HTTP_UPDATE_FAILED Error: "  + ESPhttpUpdate.getLastErrorString() + "\n");
 									break;
 
 								case HTTP_UPDATE_NO_UPDATES:
-									fehlerString +=("HTTP_UPDATE_NO_UPDATES \n",0);
+									log("HTTP_UPDATE_NO_UPDATES \n");
 									break;
 
 								case HTTP_UPDATE_OK:
-									fehlerString +=("HTTP_UPDATE_OK \n",0);
+									log("HTTP_UPDATE_OK \n");
 									break;
 							}
 									
 						 }		
 						
 
-					} else
-						fehlerString += ("Abbruch des Updates, SPIFFS failed.",0);
+					
 				
 			} else {
 				
-				fehlerString += "Eine &Umlt;berpr&uuml;fung beim Server ergab: " + checkFiles;
+				log ( "Eine &Umlt;berpr&uuml;fung beim Server ergab: " + checkFiles);
 			}
 			
 			
 		} else {
 			
-			fehlerString += "Version ist aktuell. Kein Update erforderlich";
+			log ( "Version ist aktuell. Kein Update erforderlich");
 		}
 	  
 	  

@@ -27,6 +27,7 @@ class EspSocketApi {
 		EspSocketApi(String sname, String sversion, int pingintervall);
 		void setWifi(const char* ssid, const char* pwd);
 		void init();
+		void init(boolean setGroupfunction);
 		void setSocketIO (	String url, 
 							int port, 
 							std::function<void ()> connect_func,
@@ -61,6 +62,7 @@ class EspSocketApi {
 		String _soft_version = "";				// Software Version
 		String _soft_link = "";
 		String _api_version = "";
+	
 		boolean _debug = false;					// Debugmodus, sendet alles unter log an den Server
 	
 		ESP8266WiFiMulti wiFiMulti;				// Wifi
@@ -106,6 +108,10 @@ class EspSocketApi {
 	
 		// Wifisteuerung
 		boolean wifiinit = false;
+		
+		// Gruppensteuerung
+		void setGrpname (String s);
+		boolean _groupfunction = false;
 	
 		// Hilfsfunktionen
 		void reset ();
