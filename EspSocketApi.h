@@ -44,8 +44,7 @@ class EspSocketApi {
 		
 		void addSavedVars(String name, String wert);
 		String getSavedVar (String name);
-		void loadVars();
-		void saveVars();
+
 		
 		// Hilfsfunktionen
 		
@@ -54,6 +53,7 @@ class EspSocketApi {
 		// Timeoutfunktionen
 		
 		void setTimeOutAction(std::function<void ()> pingTimeOutFunction);
+		void setTimeOutAction();
 		boolean isConnected();
 	
 	private:
@@ -88,6 +88,8 @@ class EspSocketApi {
 		
 		// Speicherfunktionen für Zustände
 		std::vector<std::vector<String>> _saved_vars;
+		void loadVars();
+		void saveVars();
 		
 		
 		// Variabeln für die exakte Loopfunktion
@@ -98,9 +100,12 @@ class EspSocketApi {
 		// Pingfunktionen
 		int _pingintervall = 10;
 		int _lastping = 0;
-		boolean _usePingTimeOut = false;
+		int _usePingTimeOut = 0;
 		std::function<void ()> _pingTimeOutFunction;
 		boolean _connection = false;
+		void timeOutAction();
+		int _timeoutcounter = 0;
+		
 	
 		// Timestamp
 		int timestamp = 0;

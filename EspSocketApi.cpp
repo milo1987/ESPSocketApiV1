@@ -6,7 +6,7 @@
 EspSocketApi::EspSocketApi (String sname, String sversion) {
 	_soft_name = sname;
 	_soft_version = sversion;
-	_api_version = "0.0.11";
+	_api_version = "0.0.12";
 }
 EspSocketApi::EspSocketApi (String sname, String sversion, int pingintervall) {
 	_pingintervall = pingintervall;
@@ -21,6 +21,7 @@ void EspSocketApi::init(boolean setGroupfunction) {
 	
 	Serial.begin(115200);
 	SPIFFS.begin();
+	loadVars();
 	
 	if (setGroupfunction) {
 		
@@ -113,7 +114,7 @@ void EspSocketApi::socketConnect (const char * payload, size_t length) {
 	log("Beginne mit SocketConnect", 0);
 	
 	
-	webSocket.emit("init", String( "\"" + _soft_name + "!*!" + _soft_version + "!*!" + WiFi.localIP().toString() + "!*!" + _api_version + "!*!" + String(_groupfunction) + "\"").c_str());
+	webSocket.emit("init", String( "\"" + _soft_name + "!*!" + _soft_version + "!*!" + WiFi.localIP().toString() + "!*!" + _api_version + "!*!" + String(_groupfunction) + "!*!" + getSavedVar("sys-restartcounter") + "\"").c_str());
 	
 	
 	_clientConnectFunction();
@@ -185,7 +186,7 @@ void EspSocketApi::loop() {
 	if (wiFiMulti.run() != WL_CONNECTED) {
 
 		
-		//log ("WiFi nicht verbunden", 0);
+		log ("WiFi nicht verbunden", 0);
 		wifiinit = false;		// Setzt die Init beim "Neuverbinden"
 		
 	} else {
@@ -240,13 +241,24 @@ int EspSocketApi::loop (std::function<void ()> f) {
 		//log ("Millis: " + String(millis()) + "; Lastping: " + String(_lastping+(_pingintervall*1000+5000)));
 		if (_loop_counter % (_pingintervall+5) == 0) {
 			if (millis() > _lastping+(_pingintervall*1000+5000) ) {
-				if (_usePingTimeOut)
-					_pingTimeOutFunction();
 				
+				
+				if (_usePingTimeOut == 2) {
+					_pingTimeOutFunction();
+				} else if (_usePingTimeOut == 1) {
+					
+					log ("Ping Timeout läuft: " + String(_timeoutcounter));
+					
+					if (_timeoutcounter <= millis()+180000)
+						timeOutAction();
+				}
+			
 				
 				_connection = false;
-			} else
+			} else {
 				_connection = true;
+				_timeoutcounter = millis();
+			}
 		}
 	
 	
@@ -258,9 +270,22 @@ int EspSocketApi::loop (std::function<void ()> f) {
 
 void EspSocketApi::setTimeOutAction(std::function<void ()> pingTimeOutFunction) {
 	
-	_usePingTimeOut = true;
+	_usePingTimeOut = 2;
 	_pingTimeOutFunction = pingTimeOutFunction;
 	
+}
+
+void EspSocketApi::setTimeOutAction() {
+	_usePingTimeOut = 1;
+}
+
+void EspSocketApi::timeOutAction() {
+	
+	int s = getSavedVar("sys-restartcounter").toInt() + 1;
+	addSavedVars("sys-restartcounter", String(s));
+	log ("Reboot, aufgrund von Timeout-Nr: " + String(s));
+	delay(3000);
+	reset();
 }
 
 
@@ -296,6 +321,7 @@ void EspSocketApi::log(String txt) {
 
 void EspSocketApi::perform_web_update(const char * payload, size_t length) {
 	
+	webSocket.emit("webUpdate", String("\"***\"").c_str() );
 	String fehlerString = "";
 	String soft_link = String(payload);
 	
